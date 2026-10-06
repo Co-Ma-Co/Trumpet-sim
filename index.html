@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Real Trumpet Simulator</title>
   <style>
     * {
@@ -11,37 +11,42 @@
       -webkit-user-select: none;
       touch-action: none;
     }
-    body {
+    html, body {
       margin: 0;
       padding: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh; /* 모바일 동적 뷰포트 높이 반영 */
       background-color: #000;
       color: #fff;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
       overflow: hidden;
     }
+    body {
+      display: flex;
+      flex-direction: column;
+    }
     header {
-      padding: 15px 20px 5px;
+      padding: 10px 20px 5px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-shrink: 0;
     }
     .note-display {
-      font-size: 38px;
+      font-size: 36px;
       font-weight: 900;
       line-height: 1;
     }
     .zone-subtitle {
-      font-size: 14px;
+      font-size: 13px;
       color: #d8a012;
       margin-top: 4px;
       font-weight: 600;
     }
     .icon-btn {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       background: #222;
       border-radius: 50%;
       display: flex;
@@ -59,8 +64,9 @@
     .main-container {
       flex: 1;
       display: flex;
-      padding: 10px 15px 20px;
-      gap: 20px;
+      padding: 5px 15px 15px;
+      gap: 15px;
+      min-height: 0; /* flex 자식 높이 줄어듦 허용 */
     }
 
     .zones-column {
@@ -70,6 +76,7 @@
       border: 1px solid #75441a;
       border-radius: 16px;
       overflow: hidden;
+      height: 100%;
     }
     .zone-box {
       flex: 1;
@@ -79,6 +86,9 @@
       align-items: center;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       cursor: pointer;
+    }
+    .zone-box:last-child {
+      border-bottom: none;
     }
     
     .zone-6 { background-color: #26090a; }
@@ -92,7 +102,7 @@
       background-color: #bfa100 !important;
       outline: 3px solid #ffea32;
       outline-offset: -3px;
-      border-radius: 12px;
+      border-radius: 10px;
       z-index: 2;
     }
 
@@ -100,6 +110,7 @@
       font-size: 18px;
       font-weight: 800;
       color: #d1752b;
+      pointer-events: none;
     }
     .zone-box.active .zone-num { color: #fff; }
     
@@ -107,33 +118,34 @@
       font-size: 11px;
       color: #aaa;
       margin-top: 2px;
+      pointer-events: none;
     }
     .zone-box.active .zone-pitch { color: #eee; }
 
     .valves-column {
-      width: 100px;
+      width: 90px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      gap: 20px;
+      gap: 15px;
     }
     .valve-btn {
-      width: 80px;
-      height: 80px;
+      width: 75px;
+      height: 75px;
       border-radius: 50%;
       background: radial-gradient(circle at 30% 30%, #e6e6e6, #888888 60%, #444444);
-      box-shadow: 0 6px 10px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.8);
+      box-shadow: 0 5px 8px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.8);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 900;
       color: #222;
       cursor: pointer;
     }
     .valve-btn.pressed {
-      transform: scale(0.92) translateY(4px);
+      transform: scale(0.92) translateY(3px);
       background: radial-gradient(circle at 30% 30%, #cccccc, #666666 60%, #222222);
       box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(0,0,0,0.8);
     }
@@ -320,7 +332,6 @@
       }
     }
 
-    // 서버 호환용 음정 파일명 자동 변환기 (# -> b)
     function formatSoundFileName(note) {
       const sharpToFlatMap = {
         'C#3': 'Db3', 'D#3': 'Eb3', 'F#3': 'Gb3', 'G#3': 'Ab3', 'A#3': 'Bb3',
@@ -347,7 +358,6 @@
 
     window.addEventListener('load', async () => {
       initAudio();
-      // 자주 사용하는 주요 음정 미리 로딩
       const preloadNotes = ["C4", "G4", "C5", "E5", "G5", "C6", "C#4", "D4", "D#4", "E4", "F4", "F#4"];
       for (let note of preloadNotes) {
         await loadAudioSample(note);
@@ -421,15 +431,35 @@
       if (isZonePressed) playSound();
     }
 
+    // 좌표 기준 위치한 Zone 감지 (드래그 용도)
+    function handlePointerMove(clientX, clientY) {
+      const element = document.elementFromPoint(clientX, clientY);
+      if (element) {
+        const zoneBox = element.closest('.zone-box');
+        if (zoneBox) {
+          const newZone = parseInt(zoneBox.dataset.zone);
+          selectZone(newZone);
+        }
+      }
+    }
+
     const zonesContainer = document.getElementById('zones-container');
 
-    const handleZoneStart = (e) => {
+    // 터치 및 터치 드래그 처리
+    zonesContainer.addEventListener('touchstart', (e) => {
       e.preventDefault();
       isZonePressed = true;
-      const zoneBox = e.target.closest('.zone-box');
-      if (zoneBox) selectZone(parseInt(zoneBox.dataset.zone));
+      const touch = e.touches[0];
+      handlePointerMove(touch.clientX, touch.clientY);
       playSound();
-    };
+    }, { passive: false });
+
+    zonesContainer.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!isZonePressed) return;
+      const touch = e.touches[0];
+      handlePointerMove(touch.clientX, touch.clientY);
+    }, { passive: false });
 
     const handleZoneEnd = (e) => {
       e.preventDefault();
@@ -437,11 +467,22 @@
       stopAllSounds();
     };
 
-    zonesContainer.addEventListener('touchstart', handleZoneStart, { passive: false });
     zonesContainer.addEventListener('touchend', handleZoneEnd, { passive: false });
     zonesContainer.addEventListener('touchcancel', handleZoneEnd, { passive: false });
 
-    zonesContainer.addEventListener('mousedown', handleZoneStart);
+    // 마우스 및 마우스 드래그 처리
+    zonesContainer.addEventListener('mousedown', (e) => {
+      isZonePressed = true;
+      handlePointerMove(e.clientX, e.clientY);
+      playSound();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isZonePressed) {
+        handlePointerMove(e.clientX, e.clientY);
+      }
+    });
+
     window.addEventListener('mouseup', () => {
       if (isZonePressed) {
         isZonePressed = false;
