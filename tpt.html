@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Real Trumpet Simulator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      padding: 15px 20px 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .note-display {
+      font-size: 38px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .zone-subtitle {
+      font-size: 14px;
+      color: #d8a012;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      background: #222;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #fff;
+      cursor: pointer;
+      border: 1px solid #444;
+    }
+    .icon-btn:active {
+      background: #444;
+    }
+
+    .main-container {
+      flex: 1;
+      display: flex;
+      padding: 10px 15px 20px;
+      gap: 20px;
+    }
+
+    .zones-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #75441a;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .zone-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+    }
+    
+    .zone-6 { background-color: #26090a; }
+    .zone-5 { background-color: #2b1803; }
+    .zone-4 { background-color: #2e2600; }
+    .zone-3 { background-color: #03200a; }
+    .zone-2 { background-color: #081120; }
+    .zone-1 { background-color: #12081d; }
+
+    .zone-box.active {
+      background-color: #bfa100 !important;
+      outline: 3px solid #ffea32;
+      outline-offset: -3px;
+      border-radius: 12px;
+      z-index: 2;
+    }
+
+    .zone-num {
+      font-size: 18px;
+      font-weight: 800;
+      color: #d1752b;
+    }
+    .zone-box.active .zone-num { color: #fff; }
+    
+    .zone-pitch {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 2px;
+    }
+    .zone-box.active .zone-pitch { color: #eee; }
+
+    .valves-column {
+      width: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+    .valve-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #e6e6e6, #888888 60%, #444444);
+      box-shadow: 0 6px 10px rgba(0,0,0,0.5), inset 0 2px 3px rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 900;
+      color: #222;
+      cursor: pointer;
+    }
+    .valve-btn.pressed {
+      transform: scale(0.92) translateY(4px);
+      background: radial-gradient(circle at 30% 30%, #cccccc, #666666 60%, #222222);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(0,0,0,0.8);
+    }
+    
+    #loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 10;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 20;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #1e1e1e;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      border: 1px solid #333;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #333;
+      padding-bottom: 10px;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #ffea32;
+    }
+    .close-btn {
+      font-size: 24px;
+      cursor: pointer;
+      color: #888;
+    }
+    .fingering-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      font-size: 14px;
+    }
+    .fingering-table th, .fingering-table td {
+      padding: 8px 4px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .fingering-table th {
+      color: #aaa;
+      font-weight: 600;
+    }
+    .valve-badge {
+      background: #333;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      color: #ffea32;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading-overlay">🎺 오디오 샘플 로드 중...</div>
+
+  <div id="fingering-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">🎺 트럼펫 기본 운지표</div>
+        <div class="close-btn" id="modal-close">&times;</div>
+      </div>
+      <table class="fingering-table">
+        <thead>
+          <tr>
+            <th>음정</th>
+            <th>Zone</th>
+            <th>밸브 (조합)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><b>F#3 / Gb3</b></td><td>Zone 1</td><td><span class="valve-badge">1 + 2 + 3</span></td></tr>
+          <tr><td><b>G3</b></td><td>Zone 1</td><td><span class="valve-badge">1 + 3</span></td></tr>
+          <tr><td><b>G#3 / Ab3</b></td><td>Zone 1</td><td><span class="valve-badge">2 + 3</span></td></tr>
+          <tr><td><b>A3</b></td><td>Zone 1</td><td><span class="valve-badge">1 + 2</span></td></tr>
+          <tr><td><b>A#3 / Bb3</b></td><td>Zone 1</td><td><span class="valve-badge">1</span></td></tr>
+          <tr><td><b>B3</b></td><td>Zone 1</td><td><span class="valve-badge">2</span></td></tr>
+          <tr><td><b>C4 (가운데 도)</b></td><td>Zone 1</td><td><span class="valve-badge">Open</span></td></tr>
+          <tr><td><b>C#4 / Db4</b></td><td>Zone 2</td><td><span class="valve-badge">1 + 2 + 3</span></td></tr>
+          <tr><td><b>D4</b></td><td>Zone 2</td><td><span class="valve-badge">1 + 3</span></td></tr>
+          <tr><td><b>D#4 / Eb4</b></td><td>Zone 2</td><td><span class="valve-badge">2 + 3</span></td></tr>
+          <tr><td><b>E4</b></td><td>Zone 2</td><td><span class="valve-badge">1 + 2</span></td></tr>
+          <tr><td><b>F4</b></td><td>Zone 2</td><td><span class="valve-badge">1</span></td></tr>
+          <tr><td><b>F#4 / Gb4</b></td><td>Zone 2</td><td><span class="valve-badge">2</span></td></tr>
+          <tr><td><b>G4</b></td><td>Zone 2</td><td><span class="valve-badge">Open</span></td></tr>
+          <tr><td><b>G#4 / Ab4</b></td><td>Zone 3</td><td><span class="valve-badge">1 + 2 + 3</span></td></tr>
+          <tr><td><b>A4</b></td><td>Zone 3</td><td><span class="valve-badge">1 + 2</span></td></tr>
+          <tr><td><b>A#4 / Bb4</b></td><td>Zone 3</td><td><span class="valve-badge">1</span></td></tr>
+          <tr><td><b>B4</b></td><td>Zone 3</td><td><span class="valve-badge">2</span></td></tr>
+          <tr><td><b>C5</b></td><td>Zone 3</td><td><span class="valve-badge">Open</span></td></tr>
+          <tr><td><b>C#5 / Db5</b></td><td>Zone 5</td><td><span class="valve-badge">1 + 2 + 3</span></td></tr>
+          <tr><td><b>D5</b></td><td>Zone 4</td><td><span class="valve-badge">1</span></td></tr>
+          <tr><td><b>D#5 / Eb5</b></td><td>Zone 4</td><td><span class="valve-badge">2</span></td></tr>
+          <tr><td><b>E5</b></td><td>Zone 4</td><td><span class="valve-badge">Open</span></td></tr>
+          <tr><td><b>F5</b></td><td>Zone 5</td><td><span class="valve-badge">1</span></td></tr>
+          <tr><td><b>F#5 / Gb5</b></td><td>Zone 5</td><td><span class="valve-badge">2</span></td></tr>
+          <tr><td><b>G5</b></td><td>Zone 5</td><td><span class="valve-badge">Open</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <header>
+    <div>
+      <div class="note-display" id="note-display">E5</div>
+      <div class="zone-subtitle" id="zone-subtitle">Zone 4</div>
+    </div>
+    <div class="top-icons">
+      <div class="icon-btn" id="info-btn">ⓘ</div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <div class="zones-column" id="zones-container">
+      <div class="zone-box zone-6" data-zone="6"><div class="zone-num">6</div><div class="zone-pitch">F#5 - C6</div></div>
+      <div class="zone-box zone-5" data-zone="5"><div class="zone-num">5</div><div class="zone-pitch">C#5 - G5</div></div>
+      <div class="zone-box zone-4 active" data-zone="4"><div class="zone-num">4</div><div class="zone-pitch">A#4 - E5</div></div>
+      <div class="zone-box zone-3" data-zone="3"><div class="zone-num">3</div><div class="zone-pitch">F#4 - C5</div></div>
+      <div class="zone-box zone-2" data-zone="2"><div class="zone-num">2</div><div class="zone-pitch">C#4 - G4</div></div>
+      <div class="zone-box zone-1" data-zone="1"><div class="zone-num">1</div><div class="zone-pitch">F#3 - C4</div></div>
+    </div>
+
+    <div class="valves-column">
+      <div class="valve-btn" data-valve="3">3</div>
+      <div class="valve-btn" data-valve="2">2</div>
+      <div class="valve-btn" data-valve="1">1</div>
+    </div>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    let masterGain = null;
+    const audioBuffers = {};
+    let activeSources = [];
+
+    let isZonePressed = false;
+    let currentZone = 4;
+    let activeValves = new Set();
+
+    const zoneNoteLists = {
+      1: ["F#3", "G3", "G#3", "A3", "A#3", "B3", "C4"],
+      2: ["C#4", "D4", "D#4", "E4", "F4", "F#4", "G4"],
+      3: ["F#4", "G4", "G#4", "A4", "A#4", "B4", "C5"],
+      4: ["A#4", "B4", "C5", "C#5", "D5", "D#5", "E5"],
+      5: ["C#5", "D5", "D#5", "E5", "F5", "F#5", "G5"],
+      6: ["F#5", "G5", "G#5", "A5", "A#5", "B5", "C6"]
+    };
+
+    const BASE_SOUND_URL = "https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/trumpet-mp3/";
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // 서버 호환용 음정 파일명 자동 변환기 (# -> b)
+    function formatSoundFileName(note) {
+      const sharpToFlatMap = {
+        'C#3': 'Db3', 'D#3': 'Eb3', 'F#3': 'Gb3', 'G#3': 'Ab3', 'A#3': 'Bb3',
+        'C#4': 'Db4', 'D#4': 'Eb4', 'F#4': 'Gb4', 'G#4': 'Ab4', 'A#4': 'Bb4',
+        'C#5': 'Db5', 'D#5': 'Eb5', 'F#5': 'Gb5', 'G#5': 'Ab5', 'A#5': 'Bb5'
+      };
+      return sharpToFlatMap[note] || note;
+    }
+
+    async function loadAudioSample(displayNote) {
+      const soundName = formatSoundFileName(displayNote);
+      if (audioBuffers[soundName]) return audioBuffers[soundName];
+      try {
+        const response = await fetch(`${BASE_SOUND_URL}${soundName}.mp3`);
+        if (!response.ok) return null;
+        const arrayBuffer = await response.arrayBuffer();
+        const decodedData = await audioCtx.decodeAudioData(arrayBuffer);
+        audioBuffers[soundName] = decodedData;
+        return decodedData;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    window.addEventListener('load', async () => {
+      initAudio();
+      // 자주 사용하는 주요 음정 미리 로딩
+      const preloadNotes = ["C4", "G4", "C5", "E5", "G5", "C6", "C#4", "D4", "D#4", "E4", "F4", "F#4"];
+      for (let note of preloadNotes) {
+        await loadAudioSample(note);
+      }
+      document.getElementById('loading-overlay').style.display = 'none';
+    });
+
+    function stopAllSounds() {
+      if (masterGain && audioCtx) {
+        masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      }
+      activeSources.forEach(src => {
+        try {
+          src.stop(0);
+          src.disconnect();
+        } catch(e) {}
+      });
+      activeSources = [];
+    }
+
+    function updateUI() {
+      let offset = 0;
+      if (activeValves.has(1)) offset += 2;
+      if (activeValves.has(2)) offset += 1;
+      if (activeValves.has(3)) offset += 3;
+
+      const list = zoneNoteLists[currentZone];
+      const maxIndex = list.length - 1;
+      
+      let targetIndex = maxIndex - offset;
+      if (targetIndex < 0) targetIndex = 0;
+
+      const noteName = list[targetIndex];
+
+      document.getElementById('note-display').innerText = noteName;
+      let valveArr = Array.from(activeValves).sort((a,b)=>a-b);
+      let valveStr = valveArr.join('+');
+      document.getElementById('zone-subtitle').innerText = `${valveStr ? valveStr + ' ' : ''}Zone ${currentZone}`;
+      
+      return noteName;
+    }
+
+    async function playSound() {
+      initAudio();
+      const noteName = updateUI();
+
+      stopAllSounds();
+
+      if (!isZonePressed) return;
+
+      const buffer = await loadAudioSample(noteName);
+      if (buffer && isZonePressed) {
+        masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+        masterGain.gain.setValueAtTime(1.0, audioCtx.currentTime);
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(masterGain);
+
+        source.start(0);
+        activeSources.push(source);
+      }
+    }
+
+    const zoneElements = document.querySelectorAll('.zone-box');
+    function selectZone(zoneNum) {
+      if (currentZone === zoneNum) return;
+      currentZone = zoneNum;
+      zoneElements.forEach(el => el.classList.toggle('active', parseInt(el.dataset.zone) === zoneNum));
+      if (isZonePressed) playSound();
+    }
+
+    const zonesContainer = document.getElementById('zones-container');
+
+    const handleZoneStart = (e) => {
+      e.preventDefault();
+      isZonePressed = true;
+      const zoneBox = e.target.closest('.zone-box');
+      if (zoneBox) selectZone(parseInt(zoneBox.dataset.zone));
+      playSound();
+    };
+
+    const handleZoneEnd = (e) => {
+      e.preventDefault();
+      isZonePressed = false;
+      stopAllSounds();
+    };
+
+    zonesContainer.addEventListener('touchstart', handleZoneStart, { passive: false });
+    zonesContainer.addEventListener('touchend', handleZoneEnd, { passive: false });
+    zonesContainer.addEventListener('touchcancel', handleZoneEnd, { passive: false });
+
+    zonesContainer.addEventListener('mousedown', handleZoneStart);
+    window.addEventListener('mouseup', () => {
+      if (isZonePressed) {
+        isZonePressed = false;
+        stopAllSounds();
+      }
+    });
+
+    const valveBtns = document.querySelectorAll('.valve-btn');
+    valveBtns.forEach(btn => {
+      const valveNum = parseInt(btn.dataset.valve, 10);
+      
+      const press = (e) => {
+        e.preventDefault();
+        activeValves.add(valveNum);
+        btn.classList.add('pressed');
+        if (isZonePressed) {
+          playSound();
+        } else {
+          updateUI();
+        }
+      };
+
+      const release = (e) => {
+        e.preventDefault();
+        activeValves.delete(valveNum);
+        btn.classList.remove('pressed');
+        if (isZonePressed) {
+          playSound();
+        } else {
+          updateUI();
+        }
+      };
+
+      btn.addEventListener('touchstart', press, { passive: false });
+      btn.addEventListener('touchend', release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+
+      btn.addEventListener('mousedown', press);
+      btn.addEventListener('mouseup', release);
+    });
+
+    const modal = document.getElementById('fingering-modal');
+    const infoBtn = document.getElementById('info-btn');
+    const closeBtn = document.getElementById('modal-close');
+
+    infoBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+    });
+
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
